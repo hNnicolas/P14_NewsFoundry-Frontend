@@ -1,11 +1,11 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  /* ---------- BASE COLORS ---------- */
   --color-white: #ffffff;
   --color-black: #0a0a0a;
 
-  /* ---------- BACKGROUND COLORS ---------- */
   --bg-general: #ffffff;
   --bg-homepage: #fbfbfc;
   --bg-presse: #fbfbfc;
@@ -17,21 +17,18 @@
   --bg-login: #28282d;
   --bg-input: #eceef2;
 
-  /* ---------- BUTTON COLORS ---------- */
   --bg-button-primary: #803cda;
   --bg-button-secondary: #f5f5f7;
   --bg-button-chat: #cacad5;
 
-  /* ---------- TEXT COLORS ---------- */
   --text-main: #0a0a0a;
   --text-sub: #717182;
   --text-white: #ffffff;
 
-  /* ---------- EXTRA (si besoin) ---------- */
   --bg-neutral-light: #e5e5ef;
 }
 
-/* Exemple global (reset + font) */
+/* Reset global */
 body {
   margin: 0;
   padding: 0;
