@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
       email,
       password: password ? "*****" : null,
     });
+    console.log({ email, password });
 
     if (!email || !password) {
       console.log("[API LOGIN] Missing credentials");

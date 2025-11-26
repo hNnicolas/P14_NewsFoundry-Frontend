@@ -1,4 +1,3 @@
-// app/layout.tsx
 import "./globals.css";
 
 export default function RootLayout({
@@ -8,6 +7,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <title>NewsFoundry</title>
+
+        <link rel="icon" href="/images/logo.png" type="image/png" />
+      </head>
+
       <body className="antialiased">{children}</body>
     </html>
   );
