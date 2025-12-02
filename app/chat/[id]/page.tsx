@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Sidebar from "@/app/components/SideBar";
+import SideBar from "@/app/components/SideBar";
 
 type Msg = {
   role: string;
@@ -22,7 +22,6 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("jwtToken") : null;
 
-  // fetch chat
   useEffect(() => {
     if (!chatId) return;
     const fetchChat = async () => {
@@ -132,7 +131,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         className="hidden md:block"
         aria-label="Barre latérale de navigation"
       >
-        <Sidebar />
+        <SideBar />
       </aside>
 
       <div className="flex-1 flex flex-col h-screen">
