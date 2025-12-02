@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Sidebar from "@/app/components/SideBar";
+import SideBar from "@/app/components/SideBar";
 
 export default function HomePage() {
   const router = useRouter();
@@ -74,7 +74,7 @@ export default function HomePage() {
         role="complementary"
         tabIndex={0}
       >
-        <Sidebar />
+        <SideBar />
       </aside>
 
       <div className="flex-1 flex flex-col">
