@@ -49,7 +49,6 @@ export default function LoginPage() {
 
   return (
     <div className="relative w-full h-screen flex items-center justify-center">
-      {/* Background full screen */}
       <Image
         src="/images/login-background.jpg"
         alt="background"
@@ -59,16 +58,15 @@ export default function LoginPage() {
         unoptimized
       />
 
-      {/* Form container */}
-      <div
+      <main
+        role="main"
         className="bg-white shadow-xl p-10 w-[420px] relative z-10"
         style={{ borderRadius: "15px" }}
       >
-        {/* Title + Logo */}
-        <div className="flex items-center justify-center gap-2 mb-2">
+        <header className="flex items-center justify-center gap-2 mb-2">
           <h1 className="text-xl font-semibold text-purple-600">NEWSFOUNDRY</h1>
-          <Image src="/images/logo.png" alt="logo" width={28} height={28} />
-        </div>
+          <Image src="/images/logo.png" alt="robot" width={28} height={28} />
+        </header>
 
         <p className="text-gray-500 text-sm mb-6 text-center">
           Connectez-vous pour accéder à votre assistant d’actualités IA
@@ -76,14 +74,17 @@ export default function LoginPage() {
 
         {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
 
-        {/* Formulaire */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="text-left">
-            <label className="text-sm font-medium text-gray-700">
+            <label
+              htmlFor="email"
+              className="text-sm font-medium text-gray-700"
+            >
               Adresse email
             </label>
             <input
               type="email"
+              id="email"
               name="email"
               placeholder="votre.email@exemple.com"
               className="w-full mt-1 p-3 border rounded-md bg-gray-50 outline-none focus:ring-2 focus:ring-purple-300 transition"
@@ -92,11 +93,15 @@ export default function LoginPage() {
           </div>
 
           <div className="text-left">
-            <label className="text-sm font-medium text-gray-700">
+            <label
+              htmlFor="password"
+              className="text-sm font-medium text-gray-700"
+            >
               Mot de passe
             </label>
             <input
               type="password"
+              id="password"
               name="password"
               placeholder="Mot de passe"
               className="w-full mt-1 p-3 border rounded-md bg-gray-50 outline-none focus:ring-2 focus:ring-purple-300 transition"
@@ -104,7 +109,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Bouton unique */}
           <button
             type="submit"
             disabled={loading}
@@ -122,7 +126,7 @@ export default function LoginPage() {
             <span className="sr-only">Se connecter</span>
           </button>
         </form>
-      </div>
+      </main>
     </div>
   );
 }
