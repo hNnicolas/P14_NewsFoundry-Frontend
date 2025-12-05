@@ -28,10 +28,6 @@ export default function HomePage() {
     setSending(true);
 
     try {
-      // TODO: appeler ton backend, ex:
-      // const res = await fetch("/api/chats", { method: "POST", ... })
-      console.log("Message envoyé:", message);
-
       setMessage("");
       inputRef.current?.focus();
     } catch (err) {
@@ -87,30 +83,44 @@ export default function HomePage() {
             <button
               onClick={async () => {
                 try {
-                  console.log("Création d'un chat...");
                   const token = localStorage.getItem("jwtToken");
-                  const res = await fetch(
-                    `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats`,
-                    {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        Authorization: token ? `Bearer ${token}` : "",
-                      },
-                      body: JSON.stringify({ message: "Bonjour !" }),
-                    }
-                  );
+                  if (!token) {
+                    console.error("❌ Aucun token JWT trouvé !");
+                    return;
+                  }
 
-                  console.log(
-                    "URL backend utilisée :",
-                    process.env.NEXT_PUBLIC_BACKEND_URL
-                  );
+                  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+                  if (!backendUrl) {
+                    console.error("❌ NEXT_PUBLIC_BACKEND_URL non défini !");
+                    return;
+                  }
 
-                  if (!res.ok) throw new Error("Impossible de créer le chat");
-                  const data = await res.json();
-                  console.log("Data reçue :", data);
+                  const res = await fetch(`${backendUrl}/chats`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ message: "Bonjour !" }),
+                  });
 
-                  router.push(`/chat/${data.chat_id}`);
+                  const text = await res.text();
+
+                  if (!res.ok) {
+                    console.error(
+                      "❌ Requête échouée avec status :",
+                      res.status
+                    );
+                    return;
+                  }
+
+                  const data = JSON.parse(text);
+
+                  if (data.chat_id) {
+                    router.push(`/chat/${data.chat_id}`);
+                  } else {
+                    console.error("❌ Pas de chat_id dans la réponse !");
+                  }
                 } catch (err) {
                   console.error("Erreur création chat :", err);
                 }

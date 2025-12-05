@@ -22,8 +22,6 @@ type Discussion = {
 type DiscussionWithUsername = Discussion & { messages: Message[] };
 
 export default function Sidebar() {
-  console.log("URL backend utilisée :", process.env.NEXT_PUBLIC_BACKEND_URL);
-
   const router = useRouter();
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [selectedDiscussion, setSelectedDiscussion] =
@@ -46,8 +44,9 @@ export default function Sidebar() {
           headers: { Authorization: token ? `Bearer ${token}` : "" },
         }
       );
+
       if (!response.ok)
-        throw new Error("Erreur lors de la récupération des discussions");
+        throw new Error("Erreur lors de la récupération des discussions 1");
 
       const data = await response.json();
       const chats: Discussion[] = data.map((chat: any) => ({
@@ -60,7 +59,7 @@ export default function Sidebar() {
 
       setDiscussions(chats);
     } catch (error) {
-      console.error("Erreur lors du chargement des discussions:", error);
+      console.error("Erreur lors du chargement des discussions 2:", error);
     } finally {
       setIsLoading(false);
     }
@@ -75,6 +74,8 @@ export default function Sidebar() {
     setIsLoadingMessages(true);
     try {
       const token = localStorage.getItem("jwtToken");
+      console.log("Token récupéré dans handleDiscussionClick:", token);
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${chat_id}`,
         {
@@ -110,11 +111,12 @@ export default function Sidebar() {
       : "Date inconnue";
   };
 
-  // Sidebar.tsx — remplace la fonction sendMessage par celle-ci
   const sendMessage = async (messageContent: string) => {
     if (!selectedDiscussion) return;
 
-    // 1) mise à jour optimiste : ajoute le message utilisateur immédiatement
+    console.log("Envoi du message utilisateur :", messageContent);
+
+    // Mise à jour optimiste côté UI
     setSelectedDiscussion((prev) =>
       prev
         ? {
@@ -129,6 +131,8 @@ export default function Sidebar() {
 
     try {
       const token = localStorage.getItem("jwtToken");
+      console.log("Token JWT :", token);
+
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${selectedDiscussion.chat_id}/messages`,
         {
@@ -141,49 +145,49 @@ export default function Sidebar() {
         }
       );
 
-      // Log complet de la réponse pour debug
-      console.log("sendMessage: response status", res.status, res.statusText);
+      console.log("Statut réponse API :", res.status, res.statusText);
 
       const data = await res.json().catch((err) => {
-        console.error("Erreur JSON parse:", err);
+        console.error("Erreur parsing JSON :", err);
         return null;
       });
 
-      console.log("sendMessage: body from server:", data);
+      console.log("Réponse du serveur :", data);
 
       if (!res.ok) {
-        // Si erreur, on peut afficher un message d'erreur et revenir en arrière
-        console.error("Erreur lors de l'envoi du message:", data);
-        // Ici on ne remplace pas l'état, ou tu peux retirer le message optimiste si tu veux
+        console.error("Erreur lors de l'envoi du message :", data);
         return;
       }
 
-      // Si le serveur renvoie le tableau complet de messages -> on le remplace
-      if (data?.messages && Array.isArray(data.messages)) {
-        // Assure-toi que messages sont objets {role, content}
-        setSelectedDiscussion((prev) =>
-          prev ? { ...prev, messages: data.messages } : prev
-        );
-        return;
-      }
-
-      // Sinon, si le serveur renvoie assistant_response, on l'ajoute
-      const assistantText = data?.assistant_response;
-      if (assistantText) {
+      // Réponse de l'assistant
+      if (data?.assistant_response) {
         setSelectedDiscussion((prev) =>
           prev
             ? {
                 ...prev,
                 messages: [
                   ...prev.messages,
-                  { role: "assistant", content: assistantText },
+                  { role: "assistant", content: data.assistant_response },
                 ],
               }
             : prev
         );
+        return;
+      }
+
+      // Si le backend renvoie tout l'historique
+      if (Array.isArray(data?.messages)) {
+        const newMessages = data.messages.slice(
+          selectedDiscussion.messages.length
+        );
+        setSelectedDiscussion((prev) =>
+          prev
+            ? { ...prev, messages: [...prev.messages, ...newMessages] }
+            : prev
+        );
       }
     } catch (err) {
-      console.error("Erreur lors de l'envoi du message (fetch):", err);
+      console.error("Erreur lors de l'envoi du message (fetch) :", err);
     }
   };
 
@@ -262,20 +266,21 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      <DiscussionModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={
-          selectedDiscussion
-            ? selectedDiscussion.title === "Nouvelle conversation" ||
-              selectedDiscussion.title === "Discussion"
+      {selectedDiscussion && (
+        <DiscussionModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          title={
+            selectedDiscussion.title === "Nouvelle conversation" ||
+            selectedDiscussion.title === "Discussion"
               ? `Discussion du ${formatDiscussionDate(selectedDiscussion)}`
               : selectedDiscussion.title
-            : ""
-        }
-        messages={selectedDiscussion?.messages || []}
-        onSendMessage={sendMessage}
-      />
+          }
+          messages={selectedDiscussion.messages}
+          chatId={selectedDiscussion.chat_id}
+          onSendMessage={sendMessage}
+        />
+      )}
     </div>
   );
 }
