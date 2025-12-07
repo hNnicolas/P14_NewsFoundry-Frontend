@@ -293,23 +293,55 @@ export default function HomePage() {
             />
 
             <button
-              type="submit"
-              disabled={!message.trim() || sending}
-              aria-label="Envoyer le message"
-              className="inline-flex items-center justify-center  
-             disabled: disabled:cursor-not-allowed 
-             p-3 rounded-lg transition-colors 
-             focus:outline-none focus:ring-2 focus:ring-offset-2"
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem("jwtToken");
+                  if (!token) {
+                    console.error("❌ Aucun token JWT trouvé !");
+                    return;
+                  }
+
+                  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+                  if (!backendUrl) {
+                    console.error("❌ NEXT_PUBLIC_BACKEND_URL non défini !");
+                    return;
+                  }
+
+                  // 🔥 APPEL DIRECT AU BACKEND P14 /top-news
+                  const res = await fetch(`${backendUrl}/top-news`, {
+                    method: "GET",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                  });
+
+                  if (!res.ok) {
+                    console.error("❌ Erreur backend:", await res.text());
+                    return;
+                  }
+
+                  const data = await res.json();
+                  console.log("🔥 Résumé actualités =", data);
+
+                  // 👉 Redirection automatique vers un nouveau chat
+                  router.push("/chat"); // change selon ton routing
+                } catch (err) {
+                  console.error("Erreur route /top-news :", err);
+                }
+              }}
+              className="transition-transform hover:scale-105 active:scale-95 bg-[#F5F5F7] rounded-[15px] focus:outline-none focus:ring-2 focus:ring-[#803CDA]"
+              tabIndex={0}
+              aria-label="Revue de presse"
+              title="Revue de presse"
             >
               <Image
-                src="/images/send-message.png"
-                alt=""
-                width={60}
-                height={60}
-                className="w-12 h-12 -mt-3"
-                aria-hidden="true"
+                src="/images/button-news.png"
+                alt="Revue de presse"
+                width={120}
+                height={44}
+                className="h-10 w-auto"
+                priority
               />
-              <span className="sr-only">Envoyer</span>{" "}
             </button>
           </form>
         </footer>
