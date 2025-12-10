@@ -13,7 +13,6 @@ export default function HomePage() {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    // Vérifie si l'utilisateur est connecté
     const token =
       typeof window !== "undefined" ? localStorage.getItem("jwtToken") : null;
     if (!token) {
@@ -107,10 +106,7 @@ export default function HomePage() {
                   const text = await res.text();
 
                   if (!res.ok) {
-                    console.error(
-                      "❌ Requête échouée avec status :",
-                      res.status
-                    );
+                    console.error("❌ Backend error :", res.status, text);
                     return;
                   }
 
@@ -291,10 +287,11 @@ export default function HomePage() {
               aria-label="Message"
               className="flex-1 px-4 py-3 bg-gray-100 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-[#803CDA] text-gray-700 text-sm md:text-base"
             />
-
             <button
               onClick={async () => {
                 try {
+                  console.log("DEBUG: Début onClick bouton Revue de presse");
+
                   const token = localStorage.getItem("jwtToken");
                   if (!token) {
                     console.error("❌ Aucun token JWT trouvé !");
@@ -307,26 +304,62 @@ export default function HomePage() {
                     return;
                   }
 
-                  // 🔥 APPEL DIRECT AU BACKEND P14 /top-news
-                  const res = await fetch(`${backendUrl}/top-news`, {
+                  console.log("DEBUG: Récupération du résumé /top-news");
+
+                  // --- Étape 1 : Récupérer un aperçu des actualités ---
+                  const topNewsRes = await fetch(`${backendUrl}/top-news`, {
                     method: "GET",
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                    },
+                    headers: { Authorization: `Bearer ${token}` },
                   });
 
-                  if (!res.ok) {
-                    console.error("❌ Erreur backend:", await res.text());
+                  let topNewsData = null;
+                  if (topNewsRes.ok) {
+                    topNewsData = await topNewsRes.json();
+                    console.log(
+                      "DEBUG: Résumé top-news récupéré =",
+                      topNewsData
+                    );
+                  } else {
+                    console.warn(
+                      "⚠️ Pas pu récupérer /top-news :",
+                      await topNewsRes.text()
+                    );
+                  }
+
+                  console.log(
+                    "DEBUG: Création du chat avec le résumé top-news"
+                  );
+
+                  // --- Étape 2 : Créer un nouveau chat avec le résumé de top-news ---
+                  const chatRes = await fetch(`${backendUrl}/chats`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                      title: "Discussion du",
+                      message: topNewsData?.system_prompt_preview || "",
+                    }),
+                  });
+
+                  if (!chatRes.ok) {
+                    console.error(
+                      "❌ Erreur création chat:",
+                      await chatRes.text()
+                    );
                     return;
                   }
 
-                  const data = await res.json();
-                  console.log("🔥 Résumé actualités =", data);
+                  const chatData = await chatRes.json();
+                  const chatId = chatData.chat_id;
+                  console.log("DEBUG: Chat créé avec succès =", chatData);
 
-                  // 👉 Redirection automatique vers un nouveau chat
-                  router.push("/chat"); // change selon ton routing
+                  // --- Étape 3 : Redirection vers le chat ---
+                  console.log(`DEBUG: Redirection vers /chat/${chatId}`);
+                  router.push(`/chat/${chatId}`);
                 } catch (err) {
-                  console.error("Erreur route /top-news :", err);
+                  console.error("❌ Erreur bouton Revue de presse :", err);
                 }
               }}
               className="transition-transform hover:scale-105 active:scale-95 bg-[#F5F5F7] rounded-[15px] focus:outline-none focus:ring-2 focus:ring-[#803CDA]"
@@ -335,7 +368,7 @@ export default function HomePage() {
               title="Revue de presse"
             >
               <Image
-                src="/images/button-news.png"
+                src="/images/send-message.png"
                 alt="Revue de presse"
                 width={120}
                 height={44}

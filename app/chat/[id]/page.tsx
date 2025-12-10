@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import SideBar from "@/app/components/SideBar";
+import GenerateReviewModal from "@/app/components/GenerateReviewModal";
 
 type Msg = {
   role: string;
@@ -18,6 +19,8 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
   const mainRef = useRef<HTMLDivElement | null>(null);
   const token =
     typeof window !== "undefined" ? localStorage.getItem("jwtToken") : null;
@@ -125,6 +128,10 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     }
   };
 
+  function handleGenerateReview(title: string): void {
+    throw new Error("Function not implemented.");
+  }
+
   return (
     <div className="flex min-h-screen bg-[#E5E5EF]">
       <aside
@@ -167,7 +174,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           </div>
 
           <button
-            onClick={() => router.push("/generate-review")}
+            onClick={() => setIsReviewModalOpen(true)}
             aria-label="Générer une revue de presse"
             className="ml-auto flex items-center gap-3 bg-[#803CDA] text-white px-4 py-4 rounded-[10px] hover:bg-[#6d2cb8] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#803CDA]"
           >
@@ -287,6 +294,11 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           </button>
         </footer>
       </div>
+      <GenerateReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        onGenerate={(title) => handleGenerateReview(title)}
+      />
     </div>
   );
 }
