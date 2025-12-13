@@ -290,47 +290,12 @@ export default function HomePage() {
             <button
               onClick={async () => {
                 try {
-                  console.log("DEBUG: Début onClick bouton Revue de presse");
-
                   const token = localStorage.getItem("jwtToken");
-                  if (!token) {
-                    console.error("❌ Aucun token JWT trouvé !");
-                    return;
-                  }
-
                   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-                  if (!backendUrl) {
-                    console.error("❌ NEXT_PUBLIC_BACKEND_URL non défini !");
-                    return;
-                  }
 
-                  console.log("DEBUG: Récupération du résumé /top-news");
+                  if (!token || !backendUrl) return;
 
-                  // --- Étape 1 : Récupérer un aperçu des actualités ---
-                  const topNewsRes = await fetch(`${backendUrl}/top-news`, {
-                    method: "GET",
-                    headers: { Authorization: `Bearer ${token}` },
-                  });
-
-                  let topNewsData = null;
-                  if (topNewsRes.ok) {
-                    topNewsData = await topNewsRes.json();
-                    console.log(
-                      "DEBUG: Résumé top-news récupéré =",
-                      topNewsData
-                    );
-                  } else {
-                    console.warn(
-                      "⚠️ Pas pu récupérer /top-news :",
-                      await topNewsRes.text()
-                    );
-                  }
-
-                  console.log(
-                    "DEBUG: Création du chat avec le résumé top-news"
-                  );
-
-                  // --- Étape 2 : Créer un nouveau chat avec le résumé de top-news ---
+                  // 1️⃣ Créer d'abord un chat vide pour éviter que /top-news crash
                   const chatRes = await fetch(`${backendUrl}/chats`, {
                     method: "POST",
                     headers: {
@@ -339,7 +304,7 @@ export default function HomePage() {
                     },
                     body: JSON.stringify({
                       title: "Discussion du",
-                      message: topNewsData?.system_prompt_preview || "",
+                      message: message,
                     }),
                   });
 
@@ -353,10 +318,40 @@ export default function HomePage() {
 
                   const chatData = await chatRes.json();
                   const chatId = chatData.chat_id;
-                  console.log("DEBUG: Chat créé avec succès =", chatData);
 
-                  // --- Étape 3 : Redirection vers le chat ---
-                  console.log(`DEBUG: Redirection vers /chat/${chatId}`);
+                  // 2️⃣ Ensuite appeler /top-news pour obtenir le résumé AI
+                  const topNewsRes = await fetch(`${backendUrl}/top-news`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ user_message: message }),
+                  });
+
+                  if (!topNewsRes.ok) {
+                    console.error(
+                      "❌ Erreur top-news:",
+                      await topNewsRes.text()
+                    );
+                    return;
+                  }
+
+                  const topNewsData = await topNewsRes.json();
+
+                  // 3️⃣ Ajouter le message assistant dans ce chat
+                  await fetch(`${backendUrl}/chats/${chatId}/append-message`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                      role: "assistant",
+                      content: topNewsData.assistant_message,
+                    }),
+                  });
+
                   router.push(`/chat/${chatId}`);
                 } catch (err) {
                   console.error("❌ Erreur bouton Revue de presse :", err);

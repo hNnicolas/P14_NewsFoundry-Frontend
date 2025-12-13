@@ -128,9 +128,32 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     }
   };
 
-  function handleGenerateReview(title: string): void {
-    throw new Error("Function not implemented.");
-  }
+  const handleGenerateReview = async (theme: string) => {
+    if (!theme.trim()) return;
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${chatId}/generate-press-review`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify({ theme }),
+        }
+      );
+
+      await res.json();
+      setIsReviewModalOpen(false);
+
+      router.push(
+        `/revue-de-presse/${chatId}?theme=${encodeURIComponent(theme)}`
+      );
+    } catch (err) {
+      console.error("Erreur génération revue :", err);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-[#E5E5EF]">
@@ -297,7 +320,8 @@ export default function ChatPage({ params }: { params: { id: string } }) {
       <GenerateReviewModal
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
-        onGenerate={(title) => handleGenerateReview(title)}
+        chatId={chatId}
+        onGenerate={handleGenerateReview}
       />
     </div>
   );
