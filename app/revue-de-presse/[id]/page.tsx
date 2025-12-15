@@ -8,14 +8,13 @@ import Image from "next/image";
 type Article = {
   title: string;
   summary: string;
-  url: string;
+  url?: string;
 };
 
 type Review = {
   title: string;
   summary: string;
   articles: Article[];
-  additional_articles: Article[];
 };
 
 function getWeekNumber(date: Date): number {
@@ -41,40 +40,30 @@ export default function PressReviewPage({
   const [review, setReview] = useState<Review | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [copyMessage, setCopyMessage] = useState("");
 
-  const mainRef = useRef<HTMLDivElement | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const fetchReview = async () => {
       try {
         setLoading(true);
-
-        const token =
-          typeof window !== "undefined"
-            ? localStorage.getItem("jwtToken")
-            : null;
+        const token = localStorage.getItem("jwtToken");
 
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${reviewId}/press-review`,
-          {
-            headers: {
-              Authorization: token ? `Bearer ${token}` : "",
-            },
-          }
+          { headers: { Authorization: token ? `Bearer ${token}` : "" } }
         );
 
         if (!res.ok) throw new Error("Revue introuvable");
-
         const data = await res.json();
 
         setReview({
           title: data.title,
           summary: data.summary,
           articles: data.articles,
-          additional_articles: data.additional_articles ?? [],
         });
-      } catch (err) {
-        console.error("Erreur chargement revue :", err);
+      } catch {
         setReview(null);
       } finally {
         setLoading(false);
@@ -87,10 +76,34 @@ export default function PressReviewPage({
   const theme = searchParams.get("theme") ?? "Votre thème";
   const weekNumber = getWeekNumber(new Date());
 
+  const formatReviewDate = (date: Date) =>
+    new Intl.DateTimeFormat("fr-FR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+
+  const handleCopyArticle = (article: Article) => {
+    const text = `
+ACTUALITÉS ${theme} – SEMAINE ${weekNumber}
+
+${article.title}
+
+${article.summary}
+${article.url ? `\nSource : ${article.url}` : ""}
+    `.trim();
+
+    navigator.clipboard.writeText(text);
+    setCopyMessage(`Article « ${article.title} » copié dans le presse-papiers`);
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || sending) return;
-
     setSending(true);
+
     try {
       await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${reviewId}/messages`,
@@ -100,12 +113,8 @@ export default function PressReviewPage({
           body: JSON.stringify({ message: input }),
         }
       );
-
       setInput("");
       router.push(`/chat/${reviewId}`);
-    } catch (err) {
-      console.error("Erreur envoi message :", err);
-      alert("Erreur lors de l'envoi du message.");
     } finally {
       setSending(false);
     }
@@ -113,7 +122,11 @@ export default function PressReviewPage({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#E5E5EF]">
+      <div
+        className="flex items-center justify-center h-screen bg-[#E5E5EF]"
+        role="status"
+        aria-live="polite"
+      >
         Chargement de la revue de presse…
       </div>
     );
@@ -124,39 +137,11 @@ export default function PressReviewPage({
       <div
         className="flex items-center justify-center h-screen bg-[#E5E5EF]"
         role="alert"
-        aria-live="polite"
       >
         Revue introuvable.
       </div>
     );
   }
-
-  function formatReviewDate(date: Date): string {
-    return new Intl.DateTimeFormat("fr-FR", {
-      weekday: "long",
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  }
-
-  const handleCopy = () => {
-    const textToCopy = `
-ACTUALITÉS ${theme} – SEMAINE ${weekNumber}
-
-${review.summary}
-
-${review.articles
-  .map(
-    (a, i) => `${i + 1}. ${a.title}\n${a.summary}${a.url ? `\n${a.url}` : ""}`
-  )
-  .join("\n\n")}
-    `.trim();
-
-    navigator.clipboard.writeText(textToCopy);
-  };
 
   return (
     <div className="flex min-h-screen bg-[#E5E5EF]">
@@ -166,10 +151,10 @@ ${review.articles
 
       <div className="flex-1 flex flex-col h-screen">
         <header className="flex items-center px-6 py-4 bg-white border-b shadow-sm gap-3">
-          <div className="flex gap-3">
+          <nav className="flex gap-3" aria-label="Navigation principale">
             <button
               onClick={() => router.push(`/chat/${reviewId}`)}
-              className="flex items-center gap-2 bg-[#E5E5EF] px-4 py-3 rounded-[10px] hover:bg-gray-200"
+              className="flex items-center gap-2 bg-[#E5E5EF] px-4 py-3 rounded-[10px] focus-visible:outline focus-visible:outline-2"
             >
               <Image
                 src="/images/icons/chat.png"
@@ -177,12 +162,13 @@ ${review.articles
                 width={14}
                 height={14}
               />
-              <span className="font-medium">Chat</span>
+              <span className="font-medium text-gray-900">Chat</span>
             </button>
 
             <button
               disabled
-              className="flex items-center gap-2 bg-[#803CDA] px-4 py-3 rounded-[10px] cursor-not-allowed"
+              aria-current="page"
+              className="flex items-center gap-2 bg-[#803CDA] px-4 py-3 rounded-[10px]"
             >
               <Image
                 src="/images/icons/generate-reviews.png"
@@ -192,93 +178,109 @@ ${review.articles
               />
               <span className="font-medium text-white">Revue de presse</span>
             </button>
-          </div>
+          </nav>
         </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto px-6 py-10">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <article className="bg-white rounded-[14px] p-6 shadow">
-              <div className="flex justify-between mb-6">
-                <div>
-                  <h2 className="text-sm font-semibold uppercase">
-                    ACTUALITÉS {theme} – SEMAINE {weekNumber}
-                  </h2>
-                  <div className="flex items-center gap-2 text-sm mt-1">
-                    <Image
-                      src="/images/icons/calendar.png"
-                      alt=""
-                      width={14}
-                      height={14}
-                    />
-                    <span>{formatReviewDate(new Date())}</span>
-                  </div>
-                </div>
+        <main
+          ref={mainRef}
+          role="main"
+          className="flex-1 overflow-y-auto px-6 py-10"
+        >
+          <div className="max-w-4xl mx-auto space-y-8">
+            <header>
+              <h1 className="text-2xl font-semibold text-[#0a0a0a]">
+                Revue de Presse
+              </h1>
+              <p className="text-sm mt-1 text-[#5b5c6d]">
+                Consultez et gérez vos revues de presse générées par l'IA
+              </p>
+            </header>
 
-                <button
-                  onClick={handleCopy}
-                  className="bg-[#2E2F36] text-white px-4 py-2 rounded-md"
-                >
-                  Copier
-                </button>
-              </div>
+            <div aria-live="polite" className="sr-only">
+              {copyMessage}
+            </div>
 
-              <p className="mb-6 whitespace-pre-line">{review.summary}</p>
-
+            <section className="space-y-6">
               {review.articles.map((article, idx) => (
-                <div key={idx} className="mb-5">
-                  <p className="font-semibold">{article.title}</p>
-                  <p>{article.summary}</p>
-                </div>
-              ))}
-            </article>
+                <article
+                  key={idx}
+                  tabIndex={0}
+                  className="bg-white rounded-[14px] p-6 shadow focus-visible:outline focus-visible:outline-2"
+                >
+                  <header className="flex justify-between mb-6">
+                    <div tabIndex={0}>
+                      <h2 className="text-sm font-semibold uppercase">
+                        ACTUALITÉS {theme} – SEMAINE {weekNumber}
+                      </h2>
 
-            {review.additional_articles?.length > 0 && (
-              <article className="bg-white rounded-[14px] p-6 shadow">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-black mb-4">
-                  AUTRES ARTICLES SUR LE THÈME
-                </h3>
-
-                <div className="space-y-5 text-sm text-[#2E2F36] leading-relaxed">
-                  {review.additional_articles.map((article, idx) => (
-                    <div key={idx}>
-                      <p className="font-semibold">{article.title}</p>
-                      <p>{article.summary}</p>
-
-                      {article.url && (
-                        <a
-                          href={article.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 text-sm hover:underline"
-                        >
-                          Lire la source
-                        </a>
-                      )}
+                      <div
+                        tabIndex={0}
+                        className="flex items-center gap-2 text-sm mt-1 text-[#5b5c6d]"
+                      >
+                        <Image
+                          src="/images/icons/calendar.png"
+                          alt=""
+                          aria-hidden="true"
+                          width={14}
+                          height={14}
+                        />
+                        <span>{formatReviewDate(new Date())}</span>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </article>
-            )}
+
+                    <button
+                      onClick={() => handleCopyArticle(article)}
+                      className="bg-[#2E2F36] text-white px-4 py-2 rounded-md text-sm focus-visible:outline focus-visible:outline-2"
+                      aria-label={`Copier l’article ${article.title}`}
+                    >
+                      Copier
+                    </button>
+                  </header>
+
+                  <h3 tabIndex={0} className="text-lg font-semibold mb-3">
+                    {article.title}
+                  </h3>
+
+                  <p
+                    tabIndex={0}
+                    className="text-[#2E2F36] leading-relaxed whitespace-pre-line"
+                  >
+                    {article.summary}
+                  </p>
+                </article>
+              ))}
+            </section>
           </div>
         </main>
 
         <footer className="bg-white p-4 flex gap-3 border-t">
+          <label htmlFor="chat-message" className="sr-only">
+            Message du chat
+          </label>
+
           <input
+            id="chat-message"
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Écrivez un message..."
-            className="flex-1 px-4 py-3 rounded-[10px] bg-gray-100"
+            className="flex-1 px-4 py-3 rounded-[10px] bg-gray-100 focus-visible:outline focus-visible:outline-2"
           />
-          <button onClick={sendMessage} disabled={!input.trim() || sending}>
+
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim() || sending}
+            aria-label="Envoyer le message"
+            className="focus-visible:outline focus-visible:outline-2"
+          >
             <Image
               src={
                 !input.trim() || sending
                   ? "/images/send-message.png"
                   : "/images/icons/send-message-active.png"
               }
-              alt="Envoyer"
+              alt=""
               width={44}
               height={44}
             />

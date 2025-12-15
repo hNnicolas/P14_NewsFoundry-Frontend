@@ -10,6 +10,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const isDisabled = !message.trim();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -137,17 +138,25 @@ export default function HomePage() {
             </button>
 
             <button
-              className="transition-transform hover:scale-105 active:scale-95 bg-[#F5F5F7] rounded-[15px] focus:outline-none focus:ring-2 focus:ring-[#803CDA]"
-              tabIndex={0}
-              aria-label="Revue de presse"
-              title="Revue de presse"
+              disabled
+              tabIndex={-1}
+              aria-disabled="true"
+              aria-label="Revue de presse (indisponible)"
+              title="Revue de presse indisponible"
+              className="
+    bg-[#F5F5F7]
+    rounded-[15px]
+    opacity-50
+    cursor-not-allowed
+    focus:outline-none
+  "
             >
               <Image
                 src="/images/button-news.png"
-                alt="Revue de presse"
+                alt="Revue de presse indisponible"
                 width={120}
                 height={44}
-                className="h-10 w-auto"
+                className="h-10 w-auto grayscale"
                 priority
               />
             </button>
@@ -289,38 +298,15 @@ export default function HomePage() {
             />
             <button
               onClick={async () => {
+                if (!message.trim()) return;
+
                 try {
                   const token = localStorage.getItem("jwtToken");
                   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-
                   if (!token || !backendUrl) return;
 
-                  // 1️⃣ Créer d'abord un chat vide pour éviter que /top-news crash
-                  const chatRes = await fetch(`${backendUrl}/chats`, {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                      title: "Discussion du",
-                      message: message,
-                    }),
-                  });
-
-                  if (!chatRes.ok) {
-                    console.error(
-                      "❌ Erreur création chat:",
-                      await chatRes.text()
-                    );
-                    return;
-                  }
-
-                  const chatData = await chatRes.json();
-                  const chatId = chatData.chat_id;
-
-                  // 2️⃣ Ensuite appeler /top-news pour obtenir le résumé AI
-                  const topNewsRes = await fetch(`${backendUrl}/top-news`, {
+                  // Appel top-news
+                  const res = await fetch(`${backendUrl}/top-news`, {
                     method: "POST",
                     headers: {
                       "Content-Type": "application/json",
@@ -329,46 +315,46 @@ export default function HomePage() {
                     body: JSON.stringify({ user_message: message }),
                   });
 
-                  if (!topNewsRes.ok) {
-                    console.error(
-                      "❌ Erreur top-news:",
-                      await topNewsRes.text()
-                    );
+                  if (!res.ok) {
+                    console.error("❌ Erreur top-news:", await res.text());
                     return;
                   }
 
-                  const topNewsData = await topNewsRes.json();
+                  const data = await res.json();
 
-                  // 3️⃣ Ajouter le message assistant dans ce chat
-                  await fetch(`${backendUrl}/chats/${chatId}/append-message`, {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                      role: "assistant",
-                      content: topNewsData.assistant_message,
-                    }),
-                  });
-
-                  router.push(`/chat/${chatId}`);
+                  // 🔹 Redirection vers le chat créé
+                  if (data.chat_id) {
+                    router.push(`/chat/${data.chat_id}`);
+                  } else {
+                    console.error("❌ chat_id manquant dans la réponse");
+                  }
                 } catch (err) {
                   console.error("❌ Erreur bouton Revue de presse :", err);
                 }
               }}
-              className="transition-transform hover:scale-105 active:scale-95 bg-[#F5F5F7] rounded-[15px] focus:outline-none focus:ring-2 focus:ring-[#803CDA]"
-              tabIndex={0}
-              aria-label="Revue de presse"
+              disabled={!message.trim()}
+              aria-label="Générer une revue de presse"
               title="Revue de presse"
+              className="
+    p-2 rounded
+    focus:outline-none
+    focus:ring-2 focus:ring-[#803CDA]
+    disabled:opacity-50
+    disabled:cursor-not-allowed
+    transition-opacity
+  "
             >
               <Image
-                src="/images/send-message.png"
-                alt="Revue de presse"
-                width={120}
+                src={
+                  !message.trim()
+                    ? "/images/send-message.png"
+                    : "/images/icons/send-message-active.png"
+                }
+                alt=""
+                aria-hidden="true"
+                width={44}
                 height={44}
-                className="h-10 w-auto"
-                priority
+                className="w-10 h-10 md:w-11 md:h-11"
               />
             </button>
           </form>
