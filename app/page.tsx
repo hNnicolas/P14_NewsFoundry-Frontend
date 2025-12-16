@@ -12,15 +12,18 @@ export default function HomePage() {
   const [sending, setSending] = useState(false);
   const isDisabled = !message.trim();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("jwtToken") : null;
-    if (!token) {
+    const storedToken = localStorage.getItem("jwtToken");
+
+    if (!storedToken) {
       router.replace("/login");
-    } else {
-      setIsLoading(false);
+      return;
     }
+
+    setToken(storedToken);
+    setIsLoading(false);
   }, [router]);
 
   const handleSendMessage = async () => {

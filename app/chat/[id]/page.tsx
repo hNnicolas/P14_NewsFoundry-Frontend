@@ -22,8 +22,11 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const mainRef = useRef<HTMLDivElement | null>(null);
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("jwtToken") : null;
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    setToken(localStorage.getItem("jwtToken"));
+  }, []);
 
   useEffect(() => {
     if (!chatId) return;

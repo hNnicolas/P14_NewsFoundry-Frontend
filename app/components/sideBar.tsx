@@ -23,6 +23,9 @@ type DiscussionWithUsername = Discussion & { messages: Message[] };
 
 export default function Sidebar() {
   const router = useRouter();
+
+  const [token, setToken] = useState<string | null>(null);
+
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [selectedDiscussion, setSelectedDiscussion] =
     useState<DiscussionWithUsername | null>(null);
@@ -31,58 +34,91 @@ export default function Sidebar() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
+  /* ============================
+     Récupération sécurisée du token
+     ============================ */
   useEffect(() => {
-    fetchDiscussions();
-  }, []);
+    const storedToken = localStorage.getItem("jwtToken");
 
-  const fetchDiscussions = async () => {
-    try {
-      const token = localStorage.getItem("jwtToken");
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats`,
-        {
-          headers: { Authorization: token ? `Bearer ${token}` : "" },
-        }
-      );
-
-      if (!response.ok)
-        throw new Error("Erreur lors de la récupération des discussions 1");
-
-      const data = await response.json();
-      const chats: Discussion[] = data.map((chat: any) => ({
-        chat_id: chat.chat_id,
-        title: chat.title,
-        messages: chat.messages,
-        created_at: chat.created_at ?? null,
-        updated_at: chat.updated_at ?? null,
-      }));
-
-      setDiscussions(chats);
-    } catch (error) {
-      console.error("Erreur lors du chargement des discussions 2:", error);
-    } finally {
-      setIsLoading(false);
+    if (!storedToken) {
+      router.replace("/login");
+      return;
     }
-  };
 
+    setToken(storedToken);
+  }, [router]);
+
+  /* ============================
+     Chargement des discussions
+     ============================ */
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchDiscussions = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Erreur lors de la récupération des discussions");
+        }
+
+        const data = await response.json();
+
+        const chats: Discussion[] = data.map((chat: any) => ({
+          chat_id: chat.chat_id,
+          title: chat.title,
+          messages: chat.messages,
+          created_at: chat.created_at ?? null,
+          updated_at: chat.updated_at ?? null,
+        }));
+
+        setDiscussions(chats);
+      } catch (error) {
+        console.error("Erreur chargement discussions :", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDiscussions();
+  }, [token]);
+
+  /* ============================
+     Logout
+     ============================ */
   const handleLogout = () => {
     localStorage.removeItem("jwtToken");
     router.push("/login");
   };
 
+  /* ============================
+     Ouverture d’une discussion
+     ============================ */
   const handleDiscussionClick = async (chat_id: number) => {
-    setIsLoadingMessages(true);
-    try {
-      const token = localStorage.getItem("jwtToken");
-      console.log("Token récupéré dans handleDiscussionClick:", token);
+    if (!token) return;
 
+    setIsLoadingMessages(true);
+
+    try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${chat_id}`,
         {
-          headers: { Authorization: token ? `Bearer ${token}` : "" },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
-      if (!response.ok) throw new Error("Impossible de récupérer le chat");
+
+      if (!response.ok) {
+        throw new Error("Impossible de récupérer le chat");
+      }
 
       const data: Discussion = await response.json();
 
@@ -100,8 +136,12 @@ export default function Sidebar() {
     }
   };
 
+  /* ============================
+     Format date
+     ============================ */
   const formatDiscussionDate = (discussion: Discussion) => {
     const dateStr = discussion.updated_at || discussion.created_at;
+
     return dateStr
       ? new Intl.DateTimeFormat("fr-FR", {
           day: "2-digit",
@@ -111,12 +151,13 @@ export default function Sidebar() {
       : "Date inconnue";
   };
 
+  /* ============================
+     Envoi d’un message
+     ============================ */
   const sendMessage = async (messageContent: string) => {
-    if (!selectedDiscussion) return;
+    if (!selectedDiscussion || !token) return;
 
-    console.log("Envoi du message utilisateur :", messageContent);
-
-    // Mise à jour optimiste côté UI
+    // Optimistic UI
     setSelectedDiscussion((prev) =>
       prev
         ? {
@@ -130,36 +171,25 @@ export default function Sidebar() {
     );
 
     try {
-      const token = localStorage.getItem("jwtToken");
-      console.log("Token JWT :", token);
-
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${selectedDiscussion.chat_id}/messages`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: token ? `Bearer ${token}` : "",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ message: messageContent }),
         }
       );
 
-      console.log("Statut réponse API :", res.status, res.statusText);
-
-      const data = await res.json().catch((err) => {
-        console.error("Erreur parsing JSON :", err);
-        return null;
-      });
-
-      console.log("Réponse du serveur :", data);
+      const data = await res.json();
 
       if (!res.ok) {
-        console.error("Erreur lors de l'envoi du message :", data);
+        console.error("Erreur API :", data);
         return;
       }
 
-      // Réponse de l'assistant
       if (data?.assistant_response) {
         setSelectedDiscussion((prev) =>
           prev
@@ -172,46 +202,36 @@ export default function Sidebar() {
               }
             : prev
         );
-        return;
-      }
-
-      // Si le backend renvoie tout l'historique
-      if (Array.isArray(data?.messages)) {
-        const newMessages = data.messages.slice(
-          selectedDiscussion.messages.length
-        );
-        setSelectedDiscussion((prev) =>
-          prev
-            ? { ...prev, messages: [...prev.messages, ...newMessages] }
-            : prev
-        );
       }
     } catch (err) {
-      console.error("Erreur lors de l'envoi du message (fetch) :", err);
+      console.error("Erreur envoi message :", err);
     }
   };
 
+  /* ============================
+     RENDER
+     ============================ */
   return (
     <div className="flex h-screen">
       <aside
         className="w-72 border-r border-gray-200 flex flex-col"
         style={{ backgroundColor: "#FBFBFC" }}
       >
-        {" "}
         <div className="p-6 border-b border-gray-200">
           <h1
             className="text-xl font-bold flex items-center gap-2"
             style={{ color: "#803CDA" }}
           >
-            NEWSFOUNDRY{" "}
+            NEWSFOUNDRY
             <Image
               src="/images/logo.png"
               alt="Logo Robot de Newsfoundry"
               width={22}
               height={22}
-            />{" "}
-          </h1>{" "}
+            />
+          </h1>
         </div>
+
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
@@ -222,9 +242,9 @@ export default function Sidebar() {
               <div
                 key={discussion.chat_id}
                 onClick={() => handleDiscussionClick(discussion.chat_id)}
-                className="px-6 py-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors"
+                className="px-6 py-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
               >
-                <p className="font-medium text-sm" style={{ color: "#2A2A31" }}>
+                <p className="font-medium text-sm text-[#2A2A31]">
                   {discussion.title &&
                   discussion.title !== "Nouvelle conversation" &&
                   discussion.title !== "Discussion"
@@ -243,24 +263,12 @@ export default function Sidebar() {
             </div>
           )}
         </div>
+
         <div className="p-6 border-t border-gray-200">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 text-gray-600 hover:text-gray-800 transition-colors w-full text-left"
+            className="flex items-center gap-3 text-gray-600 hover:text-gray-800 w-full text-left"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
             <span className="text-sm">Se déconnecter</span>
           </button>
         </div>

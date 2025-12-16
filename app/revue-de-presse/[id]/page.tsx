@@ -41,37 +41,31 @@ export default function PressReviewPage({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [copyMessage, setCopyMessage] = useState("");
+  const [token, setToken] = useState<string | null>(null);
 
   const mainRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const fetchReview = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem("jwtToken");
+    const storedToken = localStorage.getItem("jwtToken");
 
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${reviewId}/press-review`,
-          { headers: { Authorization: token ? `Bearer ${token}` : "" } }
-        );
+    if (!storedToken) {
+      router.replace("/login");
+      return;
+    }
 
-        if (!res.ok) throw new Error("Revue introuvable");
-        const data = await res.json();
+    setToken(storedToken);
+  }, [router]);
 
-        setReview({
-          title: data.title,
-          summary: data.summary,
-          articles: data.articles,
-        });
-      } catch {
-        setReview(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+  useEffect(() => {
+    const storedToken = localStorage.getItem("jwtToken");
 
-    fetchReview();
-  }, [reviewId]);
+    if (!storedToken) {
+      router.replace("/login");
+      return;
+    }
+
+    setToken(storedToken);
+  }, [router]);
 
   const theme = searchParams.get("theme") ?? "Votre thème";
   const weekNumber = getWeekNumber(new Date());
