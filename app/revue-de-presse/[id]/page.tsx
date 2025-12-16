@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import SideBar from "@/components/Sidebar";
+import SideBar from "@/components/SideBar";
 import Image from "next/image";
 
 type Article = {
