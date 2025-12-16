@@ -21,7 +21,7 @@ type Discussion = {
 
 type DiscussionWithUsername = Discussion & { messages: Message[] };
 
-export default function Sidebar() {
+export default function SideBar() {
   const router = useRouter();
 
   const [token, setToken] = useState<string | null>(null);
@@ -34,9 +34,6 @@ export default function Sidebar() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
-  /* ============================
-     Récupération sécurisée du token
-     ============================ */
   useEffect(() => {
     const storedToken = localStorage.getItem("jwtToken");
 
@@ -48,9 +45,6 @@ export default function Sidebar() {
     setToken(storedToken);
   }, [router]);
 
-  /* ============================
-     Chargement des discussions
-     ============================ */
   useEffect(() => {
     if (!token) return;
 
@@ -90,17 +84,11 @@ export default function Sidebar() {
     fetchDiscussions();
   }, [token]);
 
-  /* ============================
-     Logout
-     ============================ */
   const handleLogout = () => {
     localStorage.removeItem("jwtToken");
     router.push("/login");
   };
 
-  /* ============================
-     Ouverture d’une discussion
-     ============================ */
   const handleDiscussionClick = async (chat_id: number) => {
     if (!token) return;
 
@@ -136,9 +124,6 @@ export default function Sidebar() {
     }
   };
 
-  /* ============================
-     Format date
-     ============================ */
   const formatDiscussionDate = (discussion: Discussion) => {
     const dateStr = discussion.updated_at || discussion.created_at;
 
@@ -151,13 +136,9 @@ export default function Sidebar() {
       : "Date inconnue";
   };
 
-  /* ============================
-     Envoi d’un message
-     ============================ */
   const sendMessage = async (messageContent: string) => {
     if (!selectedDiscussion || !token) return;
 
-    // Optimistic UI
     setSelectedDiscussion((prev) =>
       prev
         ? {
@@ -208,9 +189,6 @@ export default function Sidebar() {
     }
   };
 
-  /* ============================
-     RENDER
-     ============================ */
   return (
     <div className="flex h-screen">
       <aside
