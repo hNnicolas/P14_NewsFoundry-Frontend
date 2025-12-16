@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import SideBar from "@/app/components/SideBar";
-import GenerateReviewModal from "@/app/components/GenerateReviewModal";
+import SideBar from "@/components/SideBar";
+import GenerateReviewModal from "@/components/GenerateReviewModal";
 
 type Msg = {
   role: string;

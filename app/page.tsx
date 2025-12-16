@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import SideBar from "@/app/components/SideBar";
+import SideBar from "@/components/SideBar";
 
 export default function HomePage() {
   const router = useRouter();
