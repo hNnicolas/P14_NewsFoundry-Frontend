@@ -6,14 +6,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <head>
         <title>NewsFoundry</title>
-
-        <link rel="icon" href="/images/logo.png" type="image/png" />
+        <link rel="icon" href="/images/logo.png" />
       </head>
-
-      <body className="antialiased">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
