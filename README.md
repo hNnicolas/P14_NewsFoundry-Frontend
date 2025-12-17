@@ -135,7 +135,7 @@ Les inputs / outputs des tools sont donc **restructurés** pour être :
 📚 Références :
 
 - Documentation **PydanticAI — Tools**
-  🔗 https://ai.pydantic.dev/tools/
+- 🔗 https://ai.pydantic.dev/tools/
 - Cours **HuggingFace — Agents & outils**
 
 ---
