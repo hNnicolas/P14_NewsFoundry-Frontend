@@ -297,6 +297,8 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 
 (ou l’URL de ton backend déployé)
 
-👤 Auteur
-Projet réalisé par Nicolas Huang
-Dans le cadre d’un projet de développement web full-stack.
+---
+
+## 👤 Auteur
+- Projet réalisé par Nicolas Huang
+- Dans le cadre d’un projet de développement web full-stack.
