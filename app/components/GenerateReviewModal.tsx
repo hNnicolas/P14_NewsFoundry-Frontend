@@ -65,7 +65,7 @@ export default function GenerateReviewModal({
         aria-modal="true"
         aria-labelledby="generate-review-title"
         aria-describedby="generate-review-description"
-        className="relative w-full max-w-lg rounded-xl bg-white p-6 sm:p-8 shadow-xl"
+        className="relative w-full max-w-2xl max-h-[85vh] rounded-xl bg-white p-6 sm:p-8 shadow-xl"
       >
         <button
           onClick={onClose}
@@ -88,7 +88,7 @@ export default function GenerateReviewModal({
           tabIndex={0}
           className="mb-6 text-center text-sm text-[#5b5c6d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#803CDA]"
         >
-          Indiquez le thème principal de votre revue de presse.
+          Donnez un titre à votre revue de presse.
         </p>
 
         <label
@@ -117,7 +117,7 @@ export default function GenerateReviewModal({
           disabled={loading || !title.trim()}
           className="mt-6 w-full rounded-lg bg-black py-3 text-base sm:text-lg font-medium text-white transition-colors hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-black disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Génération en cours…" : "Générer la revue"}
+          {loading ? "Génération en cours…" : "Générer"}
         </button>
       </div>
     </div>
