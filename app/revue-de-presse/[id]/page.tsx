@@ -57,15 +57,33 @@ export default function PressReviewPage({
   }, [router]);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("jwtToken");
+    const fetchReview = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("jwtToken");
 
-    if (!storedToken) {
-      router.replace("/login");
-      return;
-    }
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${reviewId}/press-review`,
+          { headers: { Authorization: token ? `Bearer ${token}` : "" } }
+        );
 
-    setToken(storedToken);
-  }, [router]);
+        if (!res.ok) throw new Error("Revue introuvable");
+        const data = await res.json();
+
+        setReview({
+          title: data.title,
+          summary: data.summary,
+          articles: data.articles,
+        });
+      } catch {
+        setReview(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReview();
+  }, [reviewId]);
 
   const theme = searchParams.get("theme") ?? "Votre thème";
   const weekNumber = getWeekNumber(new Date());
@@ -99,14 +117,20 @@ ${article.url ? `\nSource : ${article.url}` : ""}
     setSending(true);
 
     try {
+      const token = localStorage.getItem("jwtToken");
+
       await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${reviewId}/messages`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
           body: JSON.stringify({ message: input }),
         }
       );
+
       setInput("");
       router.push(`/chat/${reviewId}`);
     } finally {
