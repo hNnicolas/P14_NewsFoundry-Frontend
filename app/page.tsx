@@ -13,6 +13,7 @@ export default function HomePage() {
   const isDisabled = !message.trim();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("jwtToken");
@@ -76,12 +77,33 @@ export default function HomePage() {
         <SideBar />
       </aside>
 
+      {sidebarOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-40 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+
+          <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-[#FBFBFC] md:hidden shadow-xl">
+            <SideBar />
+          </aside>
+        </>
+      )}
+
       <div className="flex-1 flex flex-col">
         <nav
           className="bg-white px-4 md:px-6 py-3 flex items-center gap-3 md:gap-4 shadow-sm"
           role="navigation"
           aria-label="Navigation principale"
         >
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden p-2 rounded focus:ring-2 focus:ring-[#803CDA]"
+            aria-label="Ouvrir le menu"
+          >
+            ☰
+          </button>
+
           <div className="flex gap-2 items-center">
             <button
               onClick={async () => {

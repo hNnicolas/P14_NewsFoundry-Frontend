@@ -23,26 +23,46 @@ export default function ChatPage({ params }: { params: { id: string } }) {
 
   const mainRef = useRef<HTMLDivElement | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    setToken(localStorage.getItem("jwtToken"));
-  }, []);
+    const storedToken = localStorage.getItem("jwtToken");
+
+    if (!storedToken) {
+      router.replace("/login");
+      return;
+    }
+
+    setToken(storedToken);
+    setAuthReady(true);
+  }, [router]);
 
   useEffect(() => {
-    if (!chatId) return;
+    if (!authReady || !token || !chatId) return;
+
     const fetchChat = async () => {
       setLoading(true);
+
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${chatId}`,
           {
             headers: {
-              Authorization: token ? `Bearer ${token}` : "",
+              Authorization: `Bearer ${token}`,
             },
           }
         );
-        if (!res.ok) throw new Error("Erreur fetch chat");
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            router.replace("/login");
+            return;
+          }
+          throw new Error(`Erreur fetch chat (${res.status})`);
+        }
+
         const data = await res.json();
+
         setMessages(
           data.messages.map((m: any) => ({
             role: m.role,
@@ -54,18 +74,17 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         console.error(err);
       } finally {
         setLoading(false);
-        setTimeout(
-          () =>
-            mainRef.current?.scrollTo({
-              top: mainRef.current.scrollHeight,
-              behavior: "smooth",
-            }),
-          50
-        );
+        setTimeout(() => {
+          mainRef.current?.scrollTo({
+            top: mainRef.current.scrollHeight,
+            behavior: "smooth",
+          });
+        }, 50);
       }
     };
+
     fetchChat();
-  }, [chatId, token]);
+  }, [authReady, token, chatId, router]);
 
   const formatTime = (dateStr?: string | number | Date) => {
     const d = dateStr ? new Date(dateStr) : new Date();

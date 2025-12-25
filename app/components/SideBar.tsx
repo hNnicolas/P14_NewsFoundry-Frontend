@@ -25,23 +25,19 @@ export default function SideBar() {
   const router = useRouter();
 
   const [token, setToken] = useState<string | null>(null);
-
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [selectedDiscussion, setSelectedDiscussion] =
     useState<DiscussionWithUsername | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
 
+  const [modalOpen, setModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("jwtToken");
-
     if (!storedToken) {
       router.replace("/login");
       return;
     }
-
     setToken(storedToken);
   }, [router]);
 
@@ -50,32 +46,17 @@ export default function SideBar() {
 
     const fetchDiscussions = async () => {
       try {
-        const response = await fetch(
+        const res = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        if (!response.ok) {
-          throw new Error("Erreur lors de la récupération des discussions");
-        }
+        if (!res.ok) throw new Error();
 
-        const data = await response.json();
-
-        const chats: Discussion[] = data.map((chat: any) => ({
-          chat_id: chat.chat_id,
-          title: chat.title,
-          messages: chat.messages,
-          created_at: chat.created_at ?? null,
-          updated_at: chat.updated_at ?? null,
-        }));
-
-        setDiscussions(chats);
-      } catch (error) {
-        console.error("Erreur chargement discussions :", error);
+        const data = await res.json();
+        setDiscussions(data);
+      } catch (err) {
+        console.error("Erreur chargement discussions", err);
       } finally {
         setIsLoading(false);
       }
@@ -89,184 +70,120 @@ export default function SideBar() {
     router.push("/login");
   };
 
-  const handleDiscussionClick = async (chat_id: number) => {
+  const openDiscussion = async (chat_id: number) => {
     if (!token) return;
-
-    setIsLoadingMessages(true);
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${chat_id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Impossible de récupérer le chat");
-      }
-
-      const data: Discussion = await response.json();
-
-      const messagesWithUsernames: Message[] = data.messages.map((msg) => ({
-        ...msg,
-        username: msg.role === "user" ? "Vous" : "Assistant",
-      }));
-
-      setSelectedDiscussion({ ...data, messages: messagesWithUsernames });
-      setModalOpen(true);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoadingMessages(false);
-    }
-  };
-
-  const formatDiscussionDate = (discussion: Discussion) => {
-    const dateStr = discussion.updated_at || discussion.created_at;
-
-    return dateStr
-      ? new Intl.DateTimeFormat("fr-FR", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        }).format(new Date(dateStr))
-      : "Date inconnue";
-  };
-
-  const sendMessage = async (messageContent: string) => {
-    if (!selectedDiscussion || !token) return;
-
-    setSelectedDiscussion((prev) =>
-      prev
-        ? {
-            ...prev,
-            messages: [
-              ...prev.messages,
-              { role: "user", content: messageContent },
-            ],
-          }
-        : prev
-    );
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${selectedDiscussion.chat_id}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ message: messageContent }),
-        }
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${chat_id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const data = await res.json();
+      if (!res.ok) throw new Error();
 
-      if (!res.ok) {
-        console.error("Erreur API :", data);
-        return;
-      }
+      const data: Discussion = await res.json();
 
-      if (data?.assistant_response) {
-        setSelectedDiscussion((prev) =>
-          prev
-            ? {
-                ...prev,
-                messages: [
-                  ...prev.messages,
-                  { role: "assistant", content: data.assistant_response },
-                ],
-              }
-            : prev
-        );
-      }
+      setSelectedDiscussion({
+        ...data,
+        messages: data.messages.map((m) => ({
+          ...m,
+          username: m.role === "user" ? "Vous" : "Assistant",
+        })),
+      });
+
+      setModalOpen(true);
     } catch (err) {
-      console.error("Erreur envoi message :", err);
+      console.error(err);
     }
   };
 
+  const formatDate = (d: Discussion) =>
+    new Intl.DateTimeFormat("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(d.updated_at || d.created_at || Date.now()));
+
   return (
-    <div className="flex h-screen">
-      <aside
-        className="w-72 border-r border-gray-200 flex flex-col"
-        style={{ backgroundColor: "#FBFBFC" }}
+    <aside
+      className="w-72 border-r border-gray-200 flex flex-col h-screen"
+      style={{ backgroundColor: "#FBFBFC" }}
+      role="navigation"
+      aria-label="Historique des discussions"
+    >
+      <header className="p-6 border-b border-gray-200">
+        <h1
+          className="text-xl font-bold flex items-center gap-2"
+          style={{ color: "#803CDA" }}
+          tabIndex={0}
+        >
+          NEWSFOUNDRY
+          <Image src="/images/logo.png" alt="" width={22} height={22} />
+        </h1>
+      </header>
+
+      <nav
+        className="flex-1 overflow-y-auto"
+        aria-label="Liste des discussions"
       >
-        <div className="p-6 border-b border-gray-200">
-          <h1
-            className="text-xl font-bold flex items-center gap-2"
-            style={{ color: "#803CDA" }}
-          >
-            NEWSFOUNDRY
-            <Image
-              src="/images/logo.png"
-              alt="Logo Robot de Newsfoundry"
-              width={22}
-              height={22}
-            />
-          </h1>
-        </div>
+        {isLoading ? (
+          <div className="flex justify-center py-8" role="status">
+            <div className="w-8 h-8 border-2 border-[#803CDA] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : discussions.length > 0 ? (
+          <ul role="list">
+            {discussions.map((discussion) => (
+              <li key={discussion.chat_id}>
+                <button
+                  onClick={() => openDiscussion(discussion.chat_id)}
+                  className="
+                    w-full text-left px-6 py-4 border-b border-gray-100
+                    hover:bg-gray-50
+                    focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#803CDA]
+                  "
+                  aria-label={`Ouvrir la discussion ${discussion.title}`}
+                >
+                  <p className="font-medium text-sm text-[#2A2A31]">
+                    {discussion.title || "Discussion"}
+                  </p>
+                  <p className="text-xs text-[#717182] mt-1">
+                    {formatDate(discussion)}
+                  </p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="px-6 py-8 text-center text-gray-500 text-sm">
+            Aucune discussion pour le moment
+          </p>
+        )}
+      </nav>
 
-        <div className="flex-1 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-8 h-8 border-2 border-[#803CDA] border-t-transparent rounded-full animate-spin"></div>
-            </div>
-          ) : discussions.length > 0 ? (
-            discussions.map((discussion) => (
-              <div
-                key={discussion.chat_id}
-                onClick={() => handleDiscussionClick(discussion.chat_id)}
-                className="px-6 py-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-              >
-                <p className="font-medium text-sm text-[#2A2A31]">
-                  {discussion.title &&
-                  discussion.title !== "Nouvelle conversation" &&
-                  discussion.title !== "Discussion"
-                    ? discussion.title
-                    : "Discussion du"}
-                </p>
-
-                <p className="text-[#717182] text-xs mt-1">
-                  {formatDiscussionDate(discussion)}
-                </p>
-              </div>
-            ))
-          ) : (
-            <div className="px-6 py-8 text-center text-gray-500 text-sm">
-              Aucune discussion pour le moment
-            </div>
-          )}
-        </div>
-
-        <div className="p-6 border-t border-gray-200">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 text-gray-600 hover:text-gray-800 w-full text-left"
-          >
-            <span className="text-sm">Se déconnecter</span>
-          </button>
-        </div>
-      </aside>
+      {/* FOOTER */}
+      <footer className="p-6 border-t border-gray-200">
+        <button
+          onClick={handleLogout}
+          className="
+            w-full text-left text-sm text-gray-600
+            hover:text-gray-800
+            focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#803CDA]
+          "
+        >
+          Se déconnecter
+        </button>
+      </footer>
 
       {selectedDiscussion && (
         <DiscussionModal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
-          title={
-            selectedDiscussion.title === "Nouvelle conversation" ||
-            selectedDiscussion.title === "Discussion"
-              ? `Discussion du ${formatDiscussionDate(selectedDiscussion)}`
-              : selectedDiscussion.title
-          }
+          title={selectedDiscussion.title}
           messages={selectedDiscussion.messages}
           chatId={selectedDiscussion.chat_id}
-          onSendMessage={sendMessage}
+          onSendMessage={() => {}}
         />
       )}
-    </div>
+    </aside>
   );
 }
