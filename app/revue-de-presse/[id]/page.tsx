@@ -122,7 +122,7 @@ ${article.url ? `\nSource : ${article.url}` : ""}
       await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${reviewId}/messages`,
         {
-          method: "POST",
+          method: "GET",
           headers: {
             "Content-Type": "application/json",
             Authorization: token ? `Bearer ${token}` : "",
