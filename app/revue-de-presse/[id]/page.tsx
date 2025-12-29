@@ -34,69 +34,74 @@ export default function PressReviewPage({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const reviewId = params.id;
+  const chatId = params.id;
+
+  const theme = searchParams.get("theme") ?? "Actualités";
+  const weekNumber = getWeekNumber(new Date());
 
   const [loading, setLoading] = useState(true);
   const [review, setReview] = useState<Review | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [copyMessage, setCopyMessage] = useState("");
-  const [token, setToken] = useState<string | null>(null);
 
   const mainRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("jwtToken");
-
-    if (!storedToken) {
-      router.replace("/login");
-      return;
-    }
-
-    setToken(storedToken);
+    const token = localStorage.getItem("jwtToken");
+    if (!token) router.replace("/login");
   }, [router]);
 
-  useEffect(() => {
-    const fetchReview = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem("jwtToken");
+  const fetchReview = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("jwtToken");
 
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${reviewId}/press-review`,
-          { headers: { Authorization: token ? `Bearer ${token}` : "" } }
-        );
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${chatId}/press-review`,
+        { headers: { Authorization: token ? `Bearer ${token}` : "" } }
+      );
 
-        if (!res.ok) throw new Error("Revue introuvable");
-        const data = await res.json();
-
-        setReview({
-          title: data.title,
-          summary: data.summary,
-          articles: data.articles,
-        });
-      } catch {
+      if (!res.ok) {
         setReview(null);
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
+      const data = await res.json();
+      setReview(data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchReview();
-  }, [reviewId]);
+  }, [chatId]);
 
-  const theme = searchParams.get("theme") ?? "Votre thème";
-  const weekNumber = getWeekNumber(new Date());
+  const generateReview = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("jwtToken");
 
-  const formatReviewDate = (date: Date) =>
-    new Intl.DateTimeFormat("fr-FR", {
-      weekday: "long",
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${chatId}/generate-press-review`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify({ theme }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Erreur génération");
+
+      await fetchReview();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCopyArticle = (article: Article) => {
     const text = `
@@ -106,10 +111,10 @@ ${article.title}
 
 ${article.summary}
 ${article.url ? `\nSource : ${article.url}` : ""}
-    `.trim();
+`.trim();
 
     navigator.clipboard.writeText(text);
-    setCopyMessage(`Article « ${article.title} » copié dans le presse-papiers`);
+    setCopyMessage(`Article « ${article.title} » copié`);
   };
 
   const sendMessage = async () => {
@@ -120,9 +125,9 @@ ${article.url ? `\nSource : ${article.url}` : ""}
       const token = localStorage.getItem("jwtToken");
 
       await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${reviewId}/messages`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chats/${chatId}/messages`,
         {
-          method: "GET",
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: token ? `Bearer ${token}` : "",
@@ -132,7 +137,7 @@ ${article.url ? `\nSource : ${article.url}` : ""}
       );
 
       setInput("");
-      router.push(`/chat/${reviewId}`);
+      router.push(`/chat/${chatId}`);
     } finally {
       setSending(false);
     }
@@ -140,11 +145,7 @@ ${article.url ? `\nSource : ${article.url}` : ""}
 
   if (loading) {
     return (
-      <div
-        className="flex items-center justify-center h-screen bg-[#E5E5EF]"
-        role="status"
-        aria-live="polite"
-      >
+      <div className="flex items-center justify-center h-screen bg-[#E5E5EF]">
         Chargement de la revue de presse…
       </div>
     );
@@ -152,11 +153,14 @@ ${article.url ? `\nSource : ${article.url}` : ""}
 
   if (!review) {
     return (
-      <div
-        className="flex items-center justify-center h-screen bg-[#E5E5EF]"
-        role="alert"
-      >
-        Revue introuvable.
+      <div className="flex flex-col items-center justify-center h-screen gap-6 bg-[#E5E5EF]">
+        <p>Aucune revue de presse générée pour cette discussion.</p>
+        <button
+          onClick={generateReview}
+          className="bg-[#803CDA] text-white px-6 py-3 rounded-lg"
+        >
+          Générer la revue de presse
+        </button>
       </div>
     );
   }
@@ -169,10 +173,10 @@ ${article.url ? `\nSource : ${article.url}` : ""}
 
       <div className="flex-1 flex flex-col h-screen">
         <header className="flex items-center px-6 py-4 bg-white border-b shadow-sm gap-3">
-          <nav className="flex gap-3" aria-label="Navigation principale">
+          <nav className="flex gap-3">
             <button
-              onClick={() => router.push(`/chat/${reviewId}`)}
-              className="flex items-center gap-2 bg-[#E5E5EF] px-4 py-3 rounded-[10px] focus-visible:outline focus-visible:outline-2"
+              onClick={() => router.push(`/chat/${chatId}`)}
+              className="flex items-center gap-2 bg-[#E5E5EF] px-4 py-3 rounded-[10px]"
             >
               <Image
                 src="/images/icons/chat.png"
@@ -180,12 +184,11 @@ ${article.url ? `\nSource : ${article.url}` : ""}
                 width={14}
                 height={14}
               />
-              <span className="font-medium text-gray-900">Chat</span>
+              <span>Chat</span>
             </button>
 
             <button
               disabled
-              aria-current="page"
               className="flex items-center gap-2 bg-[#803CDA] px-4 py-3 rounded-[10px]"
             >
               <Image
@@ -194,110 +197,48 @@ ${article.url ? `\nSource : ${article.url}` : ""}
                 width={14}
                 height={14}
               />
-              <span className="font-medium text-white">Revue de presse</span>
+              <span className="text-white">Revue de presse</span>
             </button>
           </nav>
         </header>
 
-        <main
-          ref={mainRef}
-          role="main"
-          className="flex-1 overflow-y-auto px-6 py-10"
-        >
-          <div className="max-w-4xl mx-auto space-y-8">
-            <header>
-              <h1 className="text-2xl font-semibold text-[#0a0a0a]">
-                Revue de Presse
-              </h1>
-              <p className="text-sm mt-1 text-[#5b5c6d]">
-                Consultez et gérez vos revues de presse générées par l'IA
-              </p>
-            </header>
-
-            <div aria-live="polite" className="sr-only">
-              {copyMessage}
-            </div>
-
-            <section className="space-y-6">
-              {review.articles.map((article, idx) => (
-                <article
-                  key={idx}
-                  tabIndex={0}
-                  className="bg-white rounded-[14px] p-6 shadow focus-visible:outline focus-visible:outline-2"
-                >
-                  <header className="flex justify-between mb-6">
-                    <div tabIndex={0}>
-                      <h2 className="text-sm font-semibold uppercase">
-                        ACTUALITÉS {theme} – SEMAINE {weekNumber}
-                      </h2>
-
-                      <div
-                        tabIndex={0}
-                        className="flex items-center gap-2 text-sm mt-1 text-[#5b5c6d]"
-                      >
-                        <Image
-                          src="/images/icons/calendar.png"
-                          alt=""
-                          aria-hidden="true"
-                          width={14}
-                          height={14}
-                        />
-                        <span>{formatReviewDate(new Date())}</span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleCopyArticle(article)}
-                      className="bg-[#2E2F36] text-white px-4 py-2 rounded-md text-sm focus-visible:outline focus-visible:outline-2"
-                      aria-label={`Copier l’article ${article.title}`}
-                    >
-                      Copier
-                    </button>
-                  </header>
-
-                  <h3 tabIndex={0} className="text-lg font-semibold mb-3">
-                    {article.title}
-                  </h3>
-
-                  <p
-                    tabIndex={0}
-                    className="text-[#2E2F36] leading-relaxed whitespace-pre-line"
+        <main ref={mainRef} className="flex-1 overflow-y-auto px-6 py-10">
+          <div className="max-w-4xl mx-auto space-y-6">
+            {review.articles.map((article, idx) => (
+              <article key={idx} className="bg-white rounded-xl p-6 shadow">
+                <header className="flex justify-between mb-4">
+                  <h2 className="text-sm font-semibold uppercase">
+                    ACTUALITÉS {theme} – SEMAINE {weekNumber}
+                  </h2>
+                  <button
+                    onClick={() => handleCopyArticle(article)}
+                    className="bg-[#2E2F36] text-white px-4 py-2 rounded-md text-sm"
                   >
-                    {article.summary}
-                  </p>
-                </article>
-              ))}
-            </section>
+                    Copier
+                  </button>
+                </header>
+
+                <h3 className="text-lg font-semibold mb-2">{article.title}</h3>
+
+                <p className="text-[#2E2F36] whitespace-pre-line">
+                  {article.summary}
+                </p>
+              </article>
+            ))}
           </div>
         </main>
 
         <footer className="bg-white p-4 flex gap-3 border-t">
-          <label htmlFor="chat-message" className="sr-only">
-            Message du chat
-          </label>
-
           <input
-            id="chat-message"
-            type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Écrivez un message..."
-            className="flex-1 px-4 py-3 rounded-[10px] bg-gray-100 focus-visible:outline focus-visible:outline-2"
+            className="flex-1 px-4 py-3 rounded-lg bg-gray-100"
           />
-
-          <button
-            onClick={sendMessage}
-            disabled={!input.trim() || sending}
-            aria-label="Envoyer le message"
-            className="focus-visible:outline focus-visible:outline-2"
-          >
+          <button onClick={sendMessage} disabled={!input.trim()}>
             <Image
-              src={
-                !input.trim() || sending
-                  ? "/images/send-message.png"
-                  : "/images/icons/send-message-active.png"
-              }
+              src="/images/icons/send-message-active.png"
               alt=""
               width={44}
               height={44}
