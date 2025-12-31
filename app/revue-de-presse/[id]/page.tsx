@@ -204,6 +204,22 @@ ${article.url ? `\nSource : ${article.url}` : ""}
 
         <main ref={mainRef} className="flex-1 overflow-y-auto px-6 py-10">
           <div className="max-w-4xl mx-auto space-y-6">
+            {/* TITRE + SYNTHÈSE */}
+            <div className="bg-white rounded-xl p-6 shadow">
+              <h1 className="text-2xl font-bold mb-4">{review.title}</h1>
+              <p className="text-[#2E2F36] whitespace-pre-line">
+                {review.summary}
+              </p>
+            </div>
+
+            {/* AUCUN ARTICLE */}
+            {review.articles.length === 0 && (
+              <div className="bg-white rounded-xl p-6 shadow text-center">
+                <p>Aucun article n’a pu être extrait pour cette revue.</p>
+              </div>
+            )}
+
+            {/* ARTICLES */}
             {review.articles.map((article, idx) => (
               <article key={idx} className="bg-white rounded-xl p-6 shadow">
                 <header className="flex justify-between mb-4">
