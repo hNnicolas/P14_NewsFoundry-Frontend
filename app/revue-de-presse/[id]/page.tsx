@@ -27,6 +27,17 @@ function getWeekNumber(date: Date): number {
   return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
+function formatDate(date: Date) {
+  const day = date.toLocaleDateString("fr-FR", { weekday: "long" });
+  const dayNumber = date.getDate();
+  const month = date.toLocaleDateString("fr-FR", { month: "long" });
+  const year = date.getFullYear();
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+
+  return `${day} ${dayNumber} ${month} ${year} à ${hours}:${minutes}`;
+}
+
 export default function PressReviewPage({
   params,
 }: {
@@ -44,6 +55,7 @@ export default function PressReviewPage({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [copyMessage, setCopyMessage] = useState("");
+  const generatedAtRef = useRef<Date>(new Date());
 
   const mainRef = useRef<HTMLElement | null>(null);
 
@@ -202,30 +214,55 @@ ${article.url ? `\nSource : ${article.url}` : ""}
           </nav>
         </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto px-6 py-10">
+        <main
+          id="main-content"
+          ref={mainRef}
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto px-6 py-10 focus:outline-none"
+        >
+          {copyMessage && (
+            <div role="status" aria-live="polite" className="sr-only">
+              {copyMessage}
+            </div>
+          )}
+
           <div className="max-w-4xl mx-auto space-y-6">
-            {/* TITRE + SYNTHÈSE */}
-            <div className="bg-white rounded-xl p-6 shadow">
-              <h1 className="text-2xl font-bold mb-4">{review.title}</h1>
-              <p className="text-[#2E2F36] whitespace-pre-line">
-                {review.summary}
+            <div className="mb-8">
+              <h1 className="text-[32px] font-semibold text-[#0a0a0a] mb-2">
+                {review.title}
+              </h1>
+              <p className="text-base text-[#5b5c6d]">
+                Consultez et gérez vos revues de presse générées par l&apos;IA
               </p>
             </div>
 
-            {/* AUCUN ARTICLE */}
             {review.articles.length === 0 && (
               <div className="bg-white rounded-xl p-6 shadow text-center">
                 <p>Aucun article n’a pu être extrait pour cette revue.</p>
               </div>
             )}
 
-            {/* ARTICLES */}
             {review.articles.map((article, idx) => (
               <article key={idx} className="bg-white rounded-xl p-6 shadow">
                 <header className="flex justify-between mb-4">
-                  <h2 className="text-sm font-semibold uppercase">
-                    ACTUALITÉS {theme} – SEMAINE {weekNumber}
-                  </h2>
+                  <div className="flex flex-col gap-1">
+                    <h2 className="text-sm font-semibold uppercase text-[#2E2F36]">
+                      ACTUALITÉS {theme} – SEMAINE {weekNumber}
+                    </h2>
+
+                    {/* Date de génération de la revue */}
+                    <div className="flex items-center gap-2 text-sm text-[#5b5c6d]">
+                      <Image
+                        src="/images/icons/calendar.png"
+                        alt=""
+                        width={14}
+                        height={14}
+                        aria-hidden="true"
+                      />
+                      <span>{formatDate(generatedAtRef.current)}</span>
+                    </div>
+                  </div>
+
                   <button
                     onClick={() => handleCopyArticle(article)}
                     className="bg-[#2E2F36] text-white px-4 py-2 rounded-md text-sm"
@@ -245,19 +282,31 @@ ${article.url ? `\nSource : ${article.url}` : ""}
         </main>
 
         <footer className="bg-white p-4 flex gap-3 border-t">
+          <label htmlFor="chat-message" className="sr-only">
+            Écrire un message
+          </label>
+
           <input
+            id="chat-message"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Écrivez un message..."
             className="flex-1 px-4 py-3 rounded-lg bg-gray-100"
           />
-          <button onClick={sendMessage} disabled={!input.trim()}>
+
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim()}
+            aria-label="Envoyer le message"
+            className="disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Image
               src="/images/icons/send-message-active.png"
               alt=""
               width={44}
               height={44}
+              aria-hidden="true"
             />
           </button>
         </footer>
