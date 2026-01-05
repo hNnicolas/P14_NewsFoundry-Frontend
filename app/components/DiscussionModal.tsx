@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useState, useEffect, useRef } from "react";
+import { FC, useEffect, useRef } from "react";
 
 type Message = {
   role: "user" | "assistant";
@@ -16,15 +16,7 @@ interface Props {
   onSendMessage: (messageContent: string) => void;
 }
 
-const DiscussionModal: FC<Props> = ({
-  open,
-  onClose,
-  title,
-  messages,
-  chatId,
-  onSendMessage,
-}) => {
-  const [input, setInput] = useState("");
+const DiscussionModal: FC<Props> = ({ open, onClose, title, messages }) => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -32,12 +24,6 @@ const DiscussionModal: FC<Props> = ({
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
-
-  const handleSend = () => {
-    if (!input.trim()) return;
-    onSendMessage(input);
-    setInput("");
-  };
 
   if (!open) return null;
 
@@ -71,25 +57,6 @@ const DiscussionModal: FC<Props> = ({
             </div>
           ))}
           <div ref={messagesEndRef} />
-        </div>
-
-        <div className="flex gap-2 items-end">
-          <label htmlFor="messageInput" className="sr-only">
-            Écrire un message
-          </label>
-          <textarea
-            id="messageInput"
-            className="flex-1 border border-gray-300 rounded px-2 py-1 resize-none h-12 md:h-16"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Écrire un message..."
-          />
-          <button
-            onClick={handleSend}
-            className="bg-[#803CDA] text-white px-4 py-2 rounded hover:bg-[#692bb5] flex-shrink-0"
-          >
-            Envoyer
-          </button>
         </div>
       </div>
     </div>
