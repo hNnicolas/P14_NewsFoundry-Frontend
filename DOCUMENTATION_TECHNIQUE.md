@@ -176,18 +176,18 @@ Elle permet d’enrichir les réponses IA avec des données factuelles.
 ### 5.1 Flux de génération d’une revue de presse
 
 Utilisateur
-↓
+<br> ↓ <br>
 POST /generate-press-review
-↓
-Recherche d’articles (World News API)
-↓
+<br> ↓ <br>
+Recherche d’articles (World News API) 
+<br> ↓ <br>
 Génération IA (PydanticAI)
-↓
-Validation du format
-↓
-Sauvegarde en base
-↓
-GET /press-review
+<br> ↓ <br>
+Validation du format 
+<br> ↓ <br>
+Sauvegarde en base 
+<br> ↓ <br>
+GET /press-review 
 
 Chaque étape est contrôlée afin d’éviter :
 
